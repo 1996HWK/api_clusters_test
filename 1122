@@ -6,7 +6,7 @@ class Data:
         self.db = pymysql.connect(
             host='localhost',
             user='root',
-            password='root',
+            password='123456',
             database='book',
             cursorclass=pymysql.cursors.DictCursor
         )
@@ -45,6 +45,9 @@ class System:
             self.borrow_book()
         elif n == "7":
             self.return_book()
+        else:
+            # 输入都不存在跳出
+            pass
 
     def add_book(self):
         print("*" * 10 + "添加图书" + "*" * 10)
@@ -61,7 +64,7 @@ class System:
                 self.ask(self.add_book, "添加")
             else:
                 print("书名和位置必须不为空!!!!!!!!!!")
-                self.add_book()
+                self.ask(self.add_book, "添加")
 
         except Exception as e:
             print(e)
@@ -70,25 +73,30 @@ class System:
     def update_book(self):
         print("*" * 10 + "修改图书" + "*" * 10)
         id = input("请输入修改的图书id: ")
-        current_data = self.mysql.query("select * from books where id={}".format(id))
-        if current_data:
-            # 如果查询到数据
-            print("当前数据为:", current_data[0])
-            book_name = input("重新输入书名，不修改输入回车")
-            position = input("重新输入位置，不修改输入回车")
-            if book_name:
-                self.mysql.operation(
-                    f"update books set name='{book_name}' where id={id}"
-                )
-            elif position:
-                self.mysql.operation(
-                    f"update books set position='{position}' where id={id}"
-                )
-            elif not book_name and not position:
-                print("书名和位置都为空！！！")
-            self.ask(self.update_book, "修改")
+        if id:
+            current_data = self.mysql.query("select * from books where id={}".format(id))
+            if current_data:
+                # 如果查询到数据
+                print("当前数据为:", current_data[0])
+                book_name = input("重新输入书名，不修改输入回车")
+                position = input("重新输入位置，不修改输入回车")
+                if book_name:
+                    self.mysql.operation(
+                        f"update books set name='{book_name}' where id={id}"
+                    )
+                    print("修改书名成功")
+                elif position:
+                    self.mysql.operation(
+                        f"update books set position='{position}' where id={id}"
+                    )
+                    print("修改位置成功")
+                elif not book_name and not position:
+                    print("书名和位置都为空！！！")
+                self.ask(self.update_book, "修改")
+            else:
+                print("查询不到id为{}的图书".format(id))
+                self.ask(self.update_book, "修改")
         else:
-            print("查询不到id为{}的图书".format(id))
             self.ask(self.update_book, "修改")
 
     def del_book(self):
@@ -123,10 +131,39 @@ class System:
             print("编号:{:3}\t 书名:{:10}\t位置：{:20}\t状态:{:3}\t借阅人:{}".format(d['id'], d['name'], d['position'], d['status'], d['borrower']))
 
     def borrow_book(self):
-        pass
+        book_id = input("请输入需要借阅图书的id:")
+        sql_query = f'select name from books where id={book_id}'
+        query = self.mysql.query(sql_query)
+        if query:
+            sql_status = f'select name from books where id={book_id} and status="在库"'
+            status = self.mysql.query(sql_status)
+            if status:
+                borrower = input("请输入你的名字:")
+                borrower_sql = f"update books set status='出借', borrower= '{borrower}'  where id={book_id}"
+                print(borrower_sql)
+                self.mysql.operation(borrower_sql)
+                print("借阅成功！！")
+                self.ask(self.borrow_book, "借阅")
+            else:
+                print("你需要借阅的图书已经借出！！")
+                self.ask(self.borrow_book, "借阅")
+        else:
+            print("借阅图书不存在！！")
+            self.ask(self.borrow_book, "借阅")
 
     def return_book(self):
-        pass
+        book_id = input("请输入需要归还图书的id:")
+        sql_query = f'select name from books where id={book_id} and borrower!='''
+        query = self.mysql.query(sql_query)
+        if query:
+            return_sql = f"update books set status='在库', borrower= '' where id={book_id}"
+            self.mysql.operation(return_sql)
+            print("归还成功！！！！")
+            self.ask(self.return_book, "归还")
+
+        else:
+            print("归还的图书id错误")
+            self.ask(self.return_book, "归还")
 
     def ask(self, func, string):
         # 询问是否继续
@@ -146,6 +183,7 @@ class System:
             choice = input("请输入选项:")
             if choice == "8":
                 print("欢迎再次使用")
+                self.mysql.close()
                 break
             else:
                 self.choice(choice)
@@ -154,8 +192,3 @@ class System:
 if __name__ == "__main__":
     system = System()
     system.run()
-
-
-
-
-
