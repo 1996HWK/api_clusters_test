@@ -1,0 +1,161 @@
+import pymysql
+
+
+class Data:
+    def __init__(self):
+        self.db = pymysql.connect(
+            host='localhost',
+            user='root',
+            password='root',
+            database='book',
+            cursorclass=pymysql.cursors.DictCursor
+        )
+        self.cursor = self.db.cursor()
+
+    def query(self, sql):
+        self.cursor.execute(sql)
+        data = self.cursor.fetchall()
+        return data
+
+    def operation(self, sql):
+        self.cursor.execute(sql)
+        self.db.commit()
+
+    def close(self):
+        self.cursor.close()
+        self.db.close()
+
+
+class System:
+    def __init__(self):
+        self. mysql = Data()
+
+    def choice(self, n):
+        if n == "1":
+            self.add_book()
+        elif n == "2":
+            self.update_book()
+        elif n == "3":
+            self.del_book()
+        elif n == "4":
+            self.query_book()
+        elif n == "5":
+            self.query_all_books()
+        elif n == "6":
+            self.borrow_book()
+        elif n == "7":
+            self.return_book()
+
+    def add_book(self):
+        print("*" * 10 + "添加图书" + "*" * 10)
+        book_name = input("请输入书名:")
+        position = input("请输入图书的位置:")
+        try:
+            # 验证输入的用户和密码是否正确
+            if book_name and position:
+                sql = f"INSERT into books(name, position) VALUE('{book_name}','{position}');"
+                self.mysql.operation(
+                    sql
+                )
+                print("添加图书成功")
+                self.ask(self.add_book, "添加")
+            else:
+                print("书名和位置必须不为空!!!!!!!!!!")
+                self.add_book()
+
+        except Exception as e:
+            print(e)
+            print("添加图书失败")
+
+    def update_book(self):
+        print("*" * 10 + "修改图书" + "*" * 10)
+        id = input("请输入修改的图书id: ")
+        current_data = self.mysql.query("select * from books where id={}".format(id))
+        if current_data:
+            # 如果查询到数据
+            print("当前数据为:", current_data[0])
+            book_name = input("重新输入书名，不修改输入回车")
+            position = input("重新输入位置，不修改输入回车")
+            if book_name:
+                self.mysql.operation(
+                    f"update books set name='{book_name}' where id={id}"
+                )
+            elif position:
+                self.mysql.operation(
+                    f"update books set position='{position}' where id={id}"
+                )
+            elif not book_name and not position:
+                print("书名和位置都为空！！！")
+            self.ask(self.update_book, "修改")
+        else:
+            print("查询不到id为{}的图书".format(id))
+            self.ask(self.update_book, "修改")
+
+    def del_book(self):
+        book_id = input("请输入需要删除图书的id:")
+        query = f'select name from book where id={book_id}'
+        if query:
+            sql = f"delete from book where id={book_id}"
+            self.mysql.operation(sql)
+            print("删除成功")
+            self.ask(self.del_book, "删除")
+        else:
+            print("输入的图书id不存在！！！！")
+            self.ask(self.del_book, "删除")
+
+    def query_book(self):
+        book_name = input("请输入需要查询的图书名字:")
+        sql = f"select * from book where name='{book_name}'"
+        data = self.mysql.query(sql)
+        if data:
+            print("编号:{:3}\t 书名:{:10}\t位置：{:20}\t状态:{:3}\t借阅人:{}".format(data[0]['id'], data[0]['name'], data[0]['position'], data[0]['status'],
+                                                                         data[0]['borrower']))
+            self.ask(self.query_book, "查询")
+        else:
+            print(f"对不起，未有查询到图书名字为《{book_name}》")
+            self.ask(self.query_book, "查询")
+
+    def query_all_books(self):
+        print("*" * 15 + "图书列表" + "*" * 15)
+        sql = "select * from books"
+        data = self.mysql.query(sql)
+        for d in data:
+            print("编号:{:3}\t 书名:{:10}\t位置：{:20}\t状态:{:3}\t借阅人:{}".format(d['id'], d['name'], d['position'], d['status'], d['borrower']))
+
+    def borrow_book(self):
+        pass
+
+    def return_book(self):
+        pass
+
+    def ask(self, func, string):
+        # 询问是否继续
+        continue_op = input(f"继续{string}请输入1，回车退出主菜单:")
+        if continue_op == "1":
+            func()
+        else:
+            pass
+
+    def run(self):
+        print("-" * 20 + "欢迎进入图书馆管理系统" + "-" * 20)
+        while True:
+            print("-" * 20 + "菜单" + "-" * 20)
+            choice_list = ["添加图书", "修改图书", "删除图书", "查询图书", "图书列表", "出借图书", "归还图书", "退出"]
+            for number, book, in enumerate(choice_list):
+                print("[{number}]:{book}".format(number=number + 1, book=book))
+            choice = input("请输入选项:")
+            if choice == "8":
+                print("欢迎再次使用")
+                break
+            else:
+                self.choice(choice)
+
+
+if __name__ == "__main__":
+    system = System()
+    system.run()
+
+
+
+
+
